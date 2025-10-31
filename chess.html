@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Multiplayer Chess</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
+        integrity="sha384-q94+BZSKLjPFROuFtcEfoiEGJMATPNcoHcvsRchLSGY2nEGrifL4UfS5SGYPtpng" crossorigin="anonymous">
+
+    <style>
+        /* --- Basic Styles --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #2c2f33;
+            color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* --- Lobby --- */
+        #lobby {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 400px;
+            width: 100%;
+            padding: 24px;
+            background-color: #36393f;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        #lobby h1 {
+            text-align: center;
+            color: #ffffff;
+            border-bottom: 2px solid #4f545c;
+            padding-bottom: 8px;
+        }
+
+        .lobby-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .lobby-section input {
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #4f545c;
+            background-color: #2c2f33;
+            color: #f0f0f0;
+            text-transform: uppercase;
+        }
+
+        .lobby-section button {
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #create-game-btn {
+            background-color: #5865f2;
+            color: white;
+        }
+
+        #create-game-btn:hover {
+            background-color: #4a56d1;
+        }
+
+        #join-game-btn {
+            background-color: #43b581;
+            color: white;
+        }
+
+        #join-game-btn:hover {
+            background-color: #3aa070;
+        }
+
+        /* --- Game Container --- */
+        #game-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* This container makes the board responsive */
+        #board-container {
+            width: 100%;
+            max-width: 600px;
+            /* Max size of the board */
+        }
+
+        /* chessboard.js will inject the board here */
+        #board {
+            width: 100%;
+        }
+
+        #game-info {
+            width: 100%;
+            max-width: 600px;
+            background-color: #36393f;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        /* --- Game Info --- */
+        #game-code-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #5865f2;
+            background-color: #2c2f33;
+            padding: 8px 12px;
+            border-radius: 4px;
+            text-align: center;
+            margin-bottom: 12px;
+            user-select: all;
+        }
+
+        #player-role {
+            font-size: 1.1rem;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 16px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .role-white {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .role-black {
+            background-color: #4f545c;
+            color: #fff;
+        }
+
+        .role-spectator {
+            background-color: #43b581;
+            color: #fff;
+        }
+
+        #status-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            min-height: 1.5em;
+            /* Prevent layout shift */
+            margin-bottom: 16px;
+        }
+
+        .players {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            font-size: 1rem;
+        }
+
+        .player-box {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+            width: 48%;
+        }
+
+        #player-white {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        #player-black {
+            background-color: #4f545c;
+            color: #fff;
+        }
+
+        #pgn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #pgn-container label {
+            font-weight: bold;
+            color: #9a9a9a;
+        }
+
+        #pgn-history {
+            width: 100%;
+            height: 100px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #4f545c;
+            background-color: #2c2f33;
+            color: #f0f0f0;
+            resize: vertical;
+        }
+
+        /* Desktop layout */
+        @media (min-width: 1000px) {
+            #game-container {
+                flex-direction: row;
+                align-items: flex-start;
+                max-width: 1100px;
+            }
+
+            #board-container {
+                flex: 2;
+                /* Board takes 2/3 space */
+                max-width: 600px;
+            }
+
+            #game-info {
+                flex: 1;
+                /* Info takes 1/3 space */
+                max-width: 400px;
+                margin-top: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="lobby">
+        <h1>Multiplayer Chess</h1>
+
+        <div class="lobby-section">
+            <button id="create-game-btn">Create New Game</button>
+        </div>
+
+        <div style="text-align: center; color: #9a9a9a; font-weight: bold;">OR</div>
+
+        <div class="lobby-section">
+            <input type="text" id="game-code-input" placeholder="Enter 6-digit game code" maxlength="6">
+            <button id="join-game-btn">Join Game</button>
+        </div>
+    </div>
+
+    <div id="game-container" class="hidden">
+
+        <div id="board-container">
+            <div id="board"></div>
+        </div>
+
+        <div id="game-info">
+            <div id="game-code-display">Game Code: ------</div>
+            <div id="player-role">Connecting...</div>
+            <div id="status-display">Waiting for opponent...</div>
+
+            <div class="players">
+                <div id="player-white" class="player-box">White: (Waiting)</div>
+                <div id="player-black" class="player-box">Black: (Waiting)</div>
+            </div>
+
+            <div id="pgn-container">
+                <label for="pgn-history">Move History (PGN)</label>
+                <textarea id="pgn-history" readonly></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"
+        integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2"
+        crossorigin="anonymous"></script>
+
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
+        integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqLIUSCCcaROSjTz1lDkyIETfREGMLS2wBrsfe"
+        crossorigin="anonymous"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"
+        integrity="sha512-s3XgLphtyoUHhzFNex8nGISLcV1lgiHBdaeUdtBjA/GgdQGrdQIab0cORyR+atLpTqouWoNnVGc68MevvE+aBw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // === GLOBAL VARIABLES ===
+        let board = null;         // chessboard.js instance
+        const game = new Chess(); // chess.js instance
+        let myRole = 'spectator'; // 'w', 'b', or 'spectator'
+        let playerId = null;
+        let gameId = null;
+        let gameRef = null;
+        let db = null;
+
+        // === FIREBASE CONFIG ===
+        // ---------------------------------------------------------------------
+        //  !!!! IMPORTANT !!!!
+        //  PASTE YOUR FIREBASE CONFIG OBJECT HERE
+        //  (Get this from your Firebase project console)
+        // ---------------------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyAtA80ukho0H5LyaVWgxkIoqUrNZL0WN7M",
+            authDomain: "my-chess-game-2b4db.firebaseapp.com",
+            projectId: "my-chess-game-2b4db",
+            storageBucket: "my-chess-game-2b4db.firebasestorage.app",
+            messagingSenderId: "1004490917971",
+            appId: "1:1004490917971:web:9be11f4c5fe29dc8a75ea6",
+            measurementId: "G-J48KG9GWGB"
+
+        };
+        // ---------------------------------------------------------------------
+
+        // === DOM ELEMENTS ===
+        const lobbyDiv = document.getElementById('lobby');
+        const gameDiv = document.getElementById('game-container');
+        const createGameBtn = document.getElementById('create-game-btn');
+        const joinGameBtn = document.getElementById('join-game-btn');
+        const gameCodeInput = document.getElementById('game-code-input');
+        const gameCodeDisplay = document.getElementById('game-code-display');
+        const playerRoleDisplay = document.getElementById('player-role');
+        const statusDisplay = document.getElementById('status-display');
+        const playerWhiteDisplay = document.getElementById('player-white');
+        const playerBlackDisplay = document.getElementById('player-black');
+        const pgnHistory = document.getElementById('pgn-history');
+
+        // === INITIALIZATION ===
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if Firebase config is placeholder
+            if (!firebaseConfig.apiKey) {
+                document.body.innerHTML = `
+                    <div style="background-color: #ffcccc; border: 2px solid red; padding: 20px; border-radius: 8px; max-width: 600px; text-align: left; color: #333;">
+                        <h1>Error: Firebase Not Configured</h1>
+                        <p>You must edit the HTML file and paste your <code>firebaseConfig</code> object into the script section.</p>
+                        <p>Please follow the setup instructions to get your config object from the Firebase console.</p>
+                    </div>`;
+                return;
+            }
+
+            // Initialize Firebase
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                alert("Could not connect to Firebase. Check your config and console for errors.");
+                return;
+            }
+
+            // Get or create a unique player ID and store it
+            playerId = localStorage.getItem('chessPlayerId');
+            if (!playerId) {
+                playerId = 'player_' + Date.now() + Math.floor(Math.random() * 1000);
+                localStorage.setItem('chessPlayerId', playerId);
+            }
+
+            // Initialize chessboard UI
+            board = Chessboard('board', {
+                position: 'start',
+                draggable: true,
+                onDragStart: onDragStart,
+                onDrop: onDrop,
+                onSnapEnd: onSnapEnd
+            });
+
+            // Handle window resize
+            $(window).resize(board.resize);
+
+            // Hook up lobby buttons
+            createGameBtn.onclick = createGame;
+            joinGameBtn.onclick = joinGame;
+
+            // Check URL for existing game ID
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlGameId = urlParams.get('game');
+            if (urlGameId) {
+                gameCodeInput.value = urlGameId;
+                initGame(urlGameId.toUpperCase());
+            }
+        });
+
+        // === LOBBY FUNCTIONS ===
+
+        function createGame() {
+            gameId = generateGameCode(6);
+            updateUrlWithGameId(gameId);
+            initGame(gameId);
+        }
+
+        function joinGame() {
+            const code = gameCodeInput.value.toUpperCase();
+            if (code.length === 6) {
+                gameId = code;
+                updateUrlWithGameId(gameId);
+                initGame(gameId);
+            } else {
+                alert("Please enter a valid 6-digit game code.");
+            }
+        }
+
+        function generateGameCode(length) {
+            const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function updateUrlWithGameId(gameId) {
+            // Update URL without reloading
+            const url = new URL(window.location);
+            url.searchParams.set('game', gameId);
+            window.history.pushState({}, '', url);
+        }
+
+        function showLobby() {
+            lobbyDiv.classList.remove('hidden');
+            gameDiv.classList.add('hidden');
+        }
+
+        function showGame() {
+            lobbyDiv.classList.add('hidden');
+            gameDiv.classList.remove('hidden');
+            board.resize(); // Ensure board is drawn correctly
+        }
+
+        // === GAME FUNCTIONS ===
+
+        function initGame(gId) {
+            showGame();
+            gameId = gId;
+            gameCodeDisplay.textContent = `Game Code: ${gameId}`;
+            gameRef = db.ref('games/' + gameId);
+
+            // Use a transaction to safely assign player roles
+            gameRef.transaction(gameData => {
+                if (gameData === null) {
+                    // Game doesn't exist, create it
+                    return {
+                        fen: 'start',
+                        pgn: '',
+                        players: { white: playerId },
+                        spectators: {},
+                        status: 'waiting'
+                    };
+                }
+
+                // Game exists, try to join
+                if (!gameData.players) {
+                    gameData.players = {};
+                }
+
+                if (gameData.players.white === playerId) {
+                    // I am White, rejoining
+                } else if (gameData.players.black === playerId) {
+                    // I am Black, rejoining
+                } else if (!gameData.players.black) {
+                    // Black position is open, take it
+                    gameData.players.black = playerId;
+                    gameData.status = 'active'; // Game starts!
+                } else {
+                    // Game is full, join as spectator
+                    if (!gameData.spectators) {
+                        gameData.spectators = {};
+                    }
+                    gameData.spectators[playerId] = true;
+                }
+
+                return gameData;
+            },
+                (error, committed, snapshot) => {
+                    if (error) {
+                        console.error("Transaction failed:", error);
+                        alert("Error joining game. Please try again.");
+                        showLobby();
+                    } else if (!committed) {
+                        console.log("Transaction not committed (race condition).");
+                        // This can happen if data changes, let's just re-read and listen
+                    } else {
+                        console.log("Joined game successfully!");
+                    }
+
+                    // After transaction, set up the listener
+                    setupGameListener();
+                });
+        }
+
+        function setupGameListener() {
+            // Listen for any changes to the game state
+            gameRef.on('value', (snapshot) => {
+                const gameData = snapshot.val();
+
+                if (gameData === null) {
+                    // Game was deleted or doesn't exist
+                    alert("Game not found or has been deleted.");
+                    showLobby();
+                    window.history.pushState({}, '', window.location.pathname); // Clear URL
+                    return;
+                }
+
+                // --- 1. Update Player Role ---
+                if (gameData.players.white === playerId) {
+                    myRole = 'w';
+                    playerRoleDisplay.textContent = "You are White";
+                    playerRoleDisplay.className = 'role-white';
+                } else if (gameData.players.black === playerId) {
+                    myRole = 'b';
+                    playerRoleDisplay.textContent = "You are Black";
+                    playerRoleDisplay.className = 'role-black';
+                } else {
+                    myRole = 'spectator';
+                    playerRoleDisplay.textContent = "You are a Spectator";
+                    playerRoleDisplay.className = 'role-spectator';
+                }
+
+                // --- 2. Update Game Logic ---
+                game.load(gameData.fen);
+
+                // --- 3. Update Board UI ---
+                board.position(gameData.fen);
+
+                // --- 4. Update Info Display ---
+                playerWhiteDisplay.textContent = `White: ${gameData.players.white ? 'Connected' : '(Waiting)'}`;
+                playerBlackDisplay.textContent = `Black: ${gameData.players.black ? 'Connected' : '(Waiting)'}`;
+
+                pgnHistory.value = gameData.pgn;
+                pgnHistory.scrollTop = pgnHistory.scrollHeight; // Auto-scroll
+
+                // --- 5. Update Status Display ---
+                let status = '';
+                const turn = game.turn() === 'w' ? 'White' : 'Black';
+
+                if (game.game_over()) {
+                    if (game.in_checkmate()) {
+                        status = `Checkmate! ${turn === 'White' ? 'Black' : 'White'} wins.`;
+                    } else if (game.in_draw()) {
+                        status = 'Draw!';
+                    } else if (game.in_stalemate()) {
+                        status = 'Stalemate!';
+                    } else if (game.in_threefold_repetition()) {
+                        status = 'Draw! (Threefold Repetition)';
+                    } else if (game.insufficient_material()) {
+                        status = 'Draw! (Insufficient Material)';
+                    }
+                } else if (gameData.status === 'waiting') {
+                    status = 'Waiting for Black to join...';
+                } else {
+                    status = `${turn}'s turn`;
+                    if (game.in_check()) {
+                        status += ` (${turn} is in check)`;
+                    }
+                }
+                statusDisplay.textContent = status;
+
+                // --- 6. Update Draggability ---
+                // Only allow moves if it's my turn
+                board.set({
+                    draggable: (myRole === game.turn() && !game.game_over())
+                });
+            });
+        }
+
+        // === CHESSBOARD.JS CALLBACKS ===
+
+        function onDragStart(source, piece, position, orientation) {
+            // Do not pick up pieces if the game is over
+            if (game.game_over()) return false;
+
+            // Only pick up pieces for the side to move
+            if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+                (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+                return false;
+            }
+
+            // Only allow player to move their own pieces
+            if (myRole !== game.turn()) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function onDrop(source, target) {
+            let move = null;
+            try {
+                // Try to make the move
+                move = game.move({
+                    from: source,
+                    to: target,
+                    promotion: 'q' // NOTE: always promote to a queen for simplicity
+                });
+            } catch (e) {
+                // This can happen if the move is invalid (e.g., puts king in check)
+                // chess.js will throw an error, which we catch.
+                console.log("Invalid move (error):", e.message);
+                return 'snapback';
+            }
+
+            // If move is illegal, snapback
+            if (move === null) {
+                return 'snapback';
+            }
+
+            // Move is legal!
+            // Update the game state in Firebase
+            // The on('value') listener will then update the board for everyone
+            gameRef.update({
+                fen: game.fen(),
+                pgn: game.pgn()
+            });
+        }
+
+        // update the board position after the piece snap
+        // for castling, en passant, pawn promotion
+        function onSnapEnd() {
+            // This is called after onDrop. We rely on the Firebase listener
+            // to be the source of truth, but this can make UI feel faster.
+            // For consistency, it's often better to *only* update from Firebase.
+            // However, chessboard.js might require this for special moves.
+            // Let's use the FEN from our *local* game object for now.
+            board.position(game.fen());
+        }
+
+    </script>
+</body>
+
+</html>
